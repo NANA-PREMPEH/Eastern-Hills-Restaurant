@@ -1023,10 +1023,10 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
                                 ₵{item.price.toFixed(2)}
                               </span>
                             </div>
-                            <h4 className="text-sm font-bold text-slate-900 mt-1 lines-clamp-1 truncate">
+                            <h4 className="mt-1 truncate text-sm font-bold text-slate-900 line-clamp-1">
                               {item.name}
                             </h4>
-                            <p className="text-xs text-slate-500 mt-0.5 line-clamp-2 h-8 overflow-hidden Leading-relaxed">
+                            <p className="mt-0.5 min-h-10 text-xs leading-5 text-slate-500 line-clamp-2">
                               {item.description || 'No description provided.'}
                             </p>
                           </div>

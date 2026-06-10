@@ -474,10 +474,10 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
 
                       {/* Info body */}
                       <div className="p-5">
-                        <div className="flex justify-between items-start">
+                        <div className="flex items-start justify-between gap-3">
                           <h4 
                             onClick={() => setSelectedItem(item)}
-                            className="text-base font-bold text-slate-900 cursor-pointer hover:text-red-600 line-clamp-1 truncate flex-1 pr-2"
+                            className="min-w-0 flex-1 cursor-pointer text-base font-bold text-slate-900 transition hover:text-red-600 line-clamp-1"
                           >
                             {item.name}
                           </h4>
@@ -485,7 +485,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
                             ₵{item.price.toFixed(2)}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 line-clamp-2 mt-1.5 h-8 overflow-hidden leading-relaxed">
+                        <p className="mt-1.5 min-h-10 text-xs leading-5 text-slate-500 line-clamp-2">
                           {item.description}
                         </p>
                       </div>
