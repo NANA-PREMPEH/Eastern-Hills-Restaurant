@@ -1,6 +1,6 @@
-import { getRemoteMenuItems, hasRemoteMenuBackend, saveRemoteMenuItems } from '../src/lib/server/menuBackend';
-import { assertAdminAuthorized, AdminAuthError } from '../src/lib/server/adminAuth';
-import { MenuItem } from '../src/types';
+import { getRemoteMenuItems, hasRemoteMenuBackend, saveRemoteMenuItems } from '../src/lib/server/menuBackend.js';
+import { assertAdminAuthorized, AdminAuthError } from '../src/lib/server/adminAuth.js';
+import type { MenuItem } from '../src/types.js';
 
 const isMenuItem = (value: unknown): value is MenuItem => {
   if (!value || typeof value !== 'object') {

@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { DEFAULT_MENU } from '../src/data/defaultMenu';
+import { DEFAULT_MENU } from '../src/data/defaultMenu.js';
 
 const APP_STATE_TABLE = 'app_state';
 const MENU_STATE_KEY = 'menu_items';

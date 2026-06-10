@@ -1,4 +1,4 @@
-import { MenuItem } from '../types';
+import type { MenuItem } from '../types.js';
 
 export const DEFAULT_MENU: MenuItem[] = [
   {

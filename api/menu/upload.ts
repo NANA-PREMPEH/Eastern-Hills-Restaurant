@@ -1,5 +1,5 @@
-import { assertAdminAuthorized, AdminAuthError } from '../../src/lib/server/adminAuth';
-import { uploadMenuImageToBlob } from '../../src/lib/server/blobStorage';
+import { assertAdminAuthorized, AdminAuthError } from '../../src/lib/server/adminAuth.js';
+import { uploadMenuImageToBlob } from '../../src/lib/server/blobStorage.js';
 
 export async function POST(request: Request) {
   try {

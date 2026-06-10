@@ -1,6 +1,6 @@
-import { assertAdminAuthorized, AdminAuthError } from '../../src/lib/server/adminAuth';
-import { getBlobDiagnostics } from '../../src/lib/server/blobStorage';
-import { getRemoteMenuBackendDiagnostics } from '../../src/lib/server/menuBackend';
+import { assertAdminAuthorized, AdminAuthError } from '../../src/lib/server/adminAuth.js';
+import { getBlobDiagnostics } from '../../src/lib/server/blobStorage.js';
+import { getRemoteMenuBackendDiagnostics } from '../../src/lib/server/menuBackend.js';
 
 type DiagnosticsStatus = 'degraded' | 'ok';
 
