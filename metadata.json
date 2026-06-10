@@ -1,0 +1,6 @@
+{
+  "name": "Eastern hills Restaurant",
+  "description": "A food ordering app where customers scan a QR code to view the menu, select items, and place orders directly to the restaurant's WhatsApp. Admins can manage menu items, prices, and upload food images.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
