@@ -17,7 +17,7 @@ const WHATSAPP_PHONE_LINK = '233541292381';
 
 interface MenuCustomerViewProps {
   menuItems: MenuItem[];
-  onOpenAdmin: () => void;
+  onOpenAdmin: (pin: string) => void;
 }
 
 export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustomerViewProps) {
@@ -191,7 +191,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
       window.localStorage.setItem('eastern_hills_admin_pin', normalizedPin);
       setStoredAdminPin(normalizedPin);
       closeStaffAccess();
-      onOpenAdmin();
+      onOpenAdmin(normalizedPin);
       return;
     }
 
@@ -201,7 +201,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
     }
 
     closeStaffAccess();
-    onOpenAdmin();
+    onOpenAdmin(normalizedPin);
   };
 
   const addToCart = (item: MenuItem) => {

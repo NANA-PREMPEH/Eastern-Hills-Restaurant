@@ -8,65 +8,129 @@ import { MenuItem } from './types';
 import { DEFAULT_MENU } from './data/defaultMenu';
 import MenuCustomerView from './components/MenuCustomerView';
 import AdminPortal from './components/AdminPortal';
+import { loadMenuItems, saveMenuItems } from './lib/menuStorage';
+import { fetchRemoteMenuItems, MenuApiUnavailableError, saveRemoteMenuItems } from './lib/menuApi';
 
 export default function App() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [adminSessionPin, setAdminSessionPin] = useState<string | null>(null);
 
-  // Initialize and load state from localStorage or DEFAULT_MENU seeds
+  const isLocalDevelopment =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
   useEffect(() => {
-    const savedMenu = localStorage.getItem('sabor_menu_items');
-    if (savedMenu) {
+    let isCancelled = false;
+
+    const initializeMenu = async () => {
       try {
-        setMenuItems(JSON.parse(savedMenu));
-      } catch (e) {
-        console.error('Error loading saved menu, resetting to default', e);
-        setMenuItems(DEFAULT_MENU);
-        localStorage.setItem('sabor_menu_items', JSON.stringify(DEFAULT_MENU));
+        const remoteMenu = await fetchRemoteMenuItems();
+        if (!isCancelled) {
+          setMenuItems(remoteMenu);
+        }
+        try {
+          await saveMenuItems(remoteMenu);
+        } catch (error) {
+          console.warn('Unable to refresh the local mirror from the remote menu.', error);
+        }
+        return;
+      } catch (error) {
+        if (!(error instanceof MenuApiUnavailableError)) {
+          console.error('Error loading remote menu.', error);
+        }
       }
-    } else {
-      setMenuItems(DEFAULT_MENU);
-      localStorage.setItem('sabor_menu_items', JSON.stringify(DEFAULT_MENU));
-    }
+
+      try {
+        const storedMenu = await loadMenuItems(DEFAULT_MENU);
+        if (!isCancelled) {
+          setMenuItems(storedMenu);
+        }
+      } catch (error) {
+        console.error('Error loading saved menu, resetting to default.', error);
+        if (!isCancelled) {
+          setMenuItems(DEFAULT_MENU);
+        }
+      }
+    };
+
+    void initializeMenu();
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
-  // Handler to sync menuItems array state and write to persist storage
-  const saveAndSetMenu = (updatedMenu: MenuItem[]) => {
+  const saveAndSetMenu = async (updatedMenu: MenuItem[], previousMenu: MenuItem[]) => {
     setMenuItems(updatedMenu);
-    localStorage.setItem('sabor_menu_items', JSON.stringify(updatedMenu));
+    let savedRemotely = false;
+
+    try {
+      if (adminSessionPin) {
+        try {
+          await saveRemoteMenuItems(updatedMenu, adminSessionPin);
+          savedRemotely = true;
+        } catch (error) {
+          if (!(error instanceof MenuApiUnavailableError) || !isLocalDevelopment) {
+            throw error;
+          }
+        }
+      }
+
+      try {
+        await saveMenuItems(updatedMenu);
+      } catch (error) {
+        if (savedRemotely) {
+          console.warn('Remote save succeeded, but local mirror persistence failed.', error);
+          return;
+        }
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error saving updated menu.', error);
+      setMenuItems(previousMenu);
+      throw error;
+    }
   };
 
-  const handleAddItem = (newItem: MenuItem) => {
+  const handleAddItem = async (newItem: MenuItem) => {
     const updated = [newItem, ...menuItems];
-    saveAndSetMenu(updated);
+    await saveAndSetMenu(updated, menuItems);
   };
 
-  const handleUpdateItem = (updatedItem: MenuItem) => {
+  const handleUpdateItem = async (updatedItem: MenuItem) => {
     const updated = menuItems.map(item => 
       item.id === updatedItem.id ? updatedItem : item
     );
-    saveAndSetMenu(updated);
+    await saveAndSetMenu(updated, menuItems);
   };
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
     const updated = menuItems.filter(item => item.id !== id);
-    saveAndSetMenu(updated);
+    await saveAndSetMenu(updated, menuItems);
   };
 
   return (
     <div className="font-sans antialiased text-slate-950 bg-slate-50 min-h-screen">
       {isAdminOpen ? (
         <AdminPortal 
+          adminPin={adminSessionPin}
           menuItems={menuItems}
           onAdd={handleAddItem}
           onUpdate={handleUpdateItem}
           onDelete={handleDeleteItem}
-          onClose={() => setIsAdminOpen(false)}
+          onClose={() => {
+            setIsAdminOpen(false);
+            setAdminSessionPin(null);
+          }}
         />
       ) : (
         <MenuCustomerView 
           menuItems={menuItems}
-          onOpenAdmin={() => setIsAdminOpen(true)}
+          onOpenAdmin={(pin) => {
+            setAdminSessionPin(pin);
+            setIsAdminOpen(true);
+          }}
         />
       )}
     </div>

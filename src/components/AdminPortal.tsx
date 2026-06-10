@@ -11,16 +11,30 @@ import {
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { MenuItem, Category, CATEGORIES } from '../types';
+import {
+  BackendDiagnostics,
+  fetchBackendDiagnostics,
+  MenuApiError,
+  MenuApiUnavailableError,
+  uploadRemoteMenuImage,
+} from '../lib/menuApi';
+
+interface UploadedImageDraft {
+  contentType: string;
+  dataUrl: string;
+  fileName: string;
+}
 
 interface AdminPortalProps {
+  adminPin: null | string;
   menuItems: MenuItem[];
-  onAdd: (item: MenuItem) => void;
-  onUpdate: (item: MenuItem) => void;
-  onDelete: (id: string) => void;
+  onAdd: (item: MenuItem) => Promise<void> | void;
+  onUpdate: (item: MenuItem) => Promise<void> | void;
+  onDelete: (id: string) => Promise<void> | void;
   onClose: () => void;
 }
 
-export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onClose }: AdminPortalProps) {
+export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDelete, onClose }: AdminPortalProps) {
   // State for item form
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -42,6 +56,11 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
   const [showQRModal, setShowQRModal] = useState(false);
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
   const [qrErrorMessage, setQrErrorMessage] = useState('');
+  const [diagnostics, setDiagnostics] = useState<BackendDiagnostics | null>(null);
+  const [diagnosticsError, setDiagnosticsError] = useState('');
+  const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
+  const [draftUpload, setDraftUpload] = useState<null | UploadedImageDraft>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Status message
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -49,6 +68,39 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
   const showFeedback = (text: string, type: 'success' | 'error' = 'success') => {
     setFeedbackMsg({ type, text });
     setTimeout(() => setFeedbackMsg(null), 3000);
+  };
+
+  const runDiagnostics = async () => {
+    if (!adminPin) {
+      setDiagnosticsError('Please close admin mode and log in again before running diagnostics.');
+      return;
+    }
+
+    try {
+      setIsRunningDiagnostics(true);
+      setDiagnosticsError('');
+      const result = await fetchBackendDiagnostics(adminPin);
+      setDiagnostics(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to run backend diagnostics.';
+      setDiagnostics(null);
+      setDiagnosticsError(message);
+    } finally {
+      setIsRunningDiagnostics(false);
+    }
+  };
+
+  const formatTimestamp = (value?: null | string) => {
+    if (!value) {
+      return 'Not available';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return date.toLocaleString();
   };
 
   // Preset Unsplash food images helper
@@ -68,14 +120,20 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        showFeedback('Image must be under 2MB to ensure smooth local storage saving!', 'error');
+        showFeedback('Image must be under 2MB to keep publishing fast and reliable.', 'error');
         return;
       }
       
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result as string);
-        showFeedback('Image uploaded successfully!');
+        const dataUrl = reader.result as string;
+        setImage(dataUrl);
+        setDraftUpload({
+          contentType: file.type || 'image/jpeg',
+          dataUrl,
+          fileName: file.name,
+        });
+        showFeedback('Image selected. It will upload when you publish the dish.');
       };
       reader.onerror = () => {
         showFeedback('Error reading file', 'error');
@@ -84,7 +142,7 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       showFeedback('Please enter a food label name!', 'error');
@@ -95,35 +153,64 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
       return;
     }
 
-    const finalImage = image || 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=600&auto=format&fit=crop&q=80';
+    setIsSaving(true);
 
-    if (editingId) {
-      // Editing
-      onUpdate({
-        id: editingId,
-        name,
-        price,
-        description,
-        category,
-        image: finalImage,
-        available
-      });
-      showFeedback(`Successfully updated "${name}"!`);
-    } else {
-      // Adding new
-      onAdd({
-        id: 'food_' + Date.now().toString(),
-        name,
-        price,
-        description,
-        category,
-        image: finalImage,
-        available: true
-      });
-      showFeedback(`Added "${name}" to the menu!`);
+    try {
+      let finalImage = image || 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=600&auto=format&fit=crop&q=80';
+
+      if (draftUpload) {
+        if (!adminPin) {
+          showFeedback('Please log in again before publishing an uploaded image.', 'error');
+          return;
+        }
+
+        try {
+          finalImage = await uploadRemoteMenuImage(draftUpload, adminPin);
+        } catch (error) {
+          if (error instanceof MenuApiUnavailableError) {
+            finalImage = draftUpload.dataUrl;
+            showFeedback('Backend upload is unavailable, so this image will only persist locally.', 'error');
+          } else if (error instanceof MenuApiError) {
+            showFeedback(error.message, 'error');
+            return;
+          } else {
+            showFeedback('Image upload failed. Please try again.', 'error');
+            return;
+          }
+        }
+      }
+
+      if (editingId) {
+        await onUpdate({
+          id: editingId,
+          name,
+          price,
+          description,
+          category,
+          image: finalImage,
+          available
+        });
+        showFeedback(`Successfully updated "${name}"!`);
+      } else {
+        await onAdd({
+          id: 'food_' + Date.now().toString(),
+          name,
+          price,
+          description,
+          category,
+          image: finalImage,
+          available: true
+        });
+        showFeedback(`Added "${name}" to the menu!`);
+      }
+
+      resetForm();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to save this menu item.';
+      showFeedback(message, 'error');
+    } finally {
+      setIsSaving(false);
     }
-
-    resetForm();
   };
 
   const resetForm = () => {
@@ -134,6 +221,7 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
     setDescription('');
     setCategory('Mains');
     setImage('');
+    setDraftUpload(null);
     setAvailable(true);
   };
 
@@ -144,6 +232,7 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
     setDescription(item.description);
     setCategory(item.category);
     setImage(item.image);
+    setDraftUpload(null);
     setAvailable(item.available);
     setIsEditing(true);
     // Smooth scroll to top of form panel
@@ -585,7 +674,10 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
                             id={`btn_preset_img_${img.name}`}
                             key={img.name}
                             type="button"
-                            onClick={() => setImage(img.url)}
+                            onClick={() => {
+                              setImage(img.url);
+                              setDraftUpload(null);
+                            }}
                             className={`text-[9px] text-center p-1 rounded font-medium border truncate transition hover:bg-white ${
                               image === img.url 
                                 ? 'bg-red-50 text-red-600 border-red-200' 
@@ -604,7 +696,10 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
                         id="input_food_image_url"
                         type="url"
                         value={image.startsWith('data:') ? '' : image}
-                        onChange={(e) => setImage(e.target.value)}
+                        onChange={(e) => {
+                          setImage(e.target.value);
+                          setDraftUpload(null);
+                        }}
                         placeholder="Or hand-paste any custom Unsplash URL..."
                         className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 text-xs rounded-lg text-slate-800 font-mono placeholder:font-sans focus:outline-none"
                       />
@@ -640,7 +735,10 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
                         <button
                           id="btn_clear_image"
                           type="button"
-                          onClick={() => setImage('')}
+                          onClick={() => {
+                            setImage('');
+                            setDraftUpload(null);
+                          }}
                           className="absolute top-2 right-2 bg-slate-900/80 hover:bg-slate-900 text-white rounded-full p-1.5 transition"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -681,9 +779,10 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
                 <button
                   id="btn_submit_food_form"
                   type="submit"
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-lg shadow-red-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                  disabled={isSaving}
+                  className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-lg shadow-red-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
                 >
-                  {isEditing ? 'Save Changes' : 'Create & Publish Dish'}
+                  {isSaving ? 'Publishing...' : isEditing ? 'Save Changes' : 'Create & Publish Dish'}
                 </button>
               </form>
             </div>
@@ -723,6 +822,103 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
                   </button>
                 </div>
               </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+              <div className="border-b border-slate-100 pb-4 mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Deployment Diagnostics</h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Confirm the shared menu database and image storage are healthy on Vercel.
+                  </p>
+                </div>
+                <button
+                  id="btn_run_backend_diagnostics"
+                  type="button"
+                  onClick={runDiagnostics}
+                  disabled={isRunningDiagnostics}
+                  className="shrink-0 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {isRunningDiagnostics ? 'Checking...' : 'Run Diagnostics'}
+                </button>
+              </div>
+
+              {diagnosticsError && (
+                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+                  {diagnosticsError}
+                </div>
+              )}
+
+              {!diagnostics && !diagnosticsError && (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-xs text-slate-500">
+                  Run diagnostics to check the live backend connection for menu data and uploaded images.
+                </div>
+              )}
+
+              {diagnostics && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Environment</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-900">{diagnostics.environment}</p>
+                      <p className="mt-1 text-[11px] text-slate-500">Runtime: {diagnostics.runtime}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Overall Status</p>
+                      <p className={`mt-1 text-sm font-semibold ${diagnostics.status === 'ok' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {diagnostics.status === 'ok' ? 'Healthy' : 'Needs attention'}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-500">Checked: {formatTimestamp(diagnostics.checkedAt)}</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Shared Menu Database</p>
+                        <p className="mt-1 text-xs text-slate-500">{diagnostics.database.message}</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${diagnostics.database.ok ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-700'}`}>
+                        {diagnostics.database.ok ? 'OK' : diagnostics.database.configured ? 'Issue' : 'Missing'}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl bg-slate-50 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider text-slate-400">Menu Items</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">{diagnostics.database.menuItemCount ?? 'Unknown'}</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider text-slate-400">Last Sync</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">{formatTimestamp(diagnostics.database.updatedAt)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Image Storage</p>
+                        <p className="mt-1 text-xs text-slate-500">{diagnostics.blob.message}</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${diagnostics.blob.ok ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-700'}`}>
+                        {diagnostics.blob.ok ? 'OK' : diagnostics.blob.configured ? 'Issue' : 'Missing'}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl bg-slate-50 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider text-slate-400">Stored Images</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">{diagnostics.blob.sampleCount ?? 'Unknown'}</p>
+                      </div>
+                      <div className="rounded-xl bg-slate-50 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wider text-slate-400">Latest Sample</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900 break-all">
+                          {diagnostics.blob.samplePathname || 'No menu-images/ upload found yet'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -857,10 +1053,18 @@ export default function AdminPortal({ menuItems, onAdd, onUpdate, onDelete, onCl
                           </button>
                           <button
                             id={`btn_delete_${item.id}`}
-                            onClick={() => {
+                            onClick={async () => {
                               if (confirm(`Remove "${item.name}" from active database completely?`)) {
-                                onDelete(item.id);
-                                showFeedback(`Removed "${item.name}"`);
+                                try {
+                                  setIsSaving(true);
+                                  await onDelete(item.id);
+                                  showFeedback(`Removed "${item.name}"`);
+                                } catch (error) {
+                                  const message = error instanceof Error ? error.message : 'Unable to delete this item.';
+                                  showFeedback(message, 'error');
+                                } finally {
+                                  setIsSaving(false);
+                                }
                               }
                             }}
                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-50 rounded-lg transition"
