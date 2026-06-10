@@ -12,6 +12,9 @@ import {
 import { MenuItem, Category, CATEGORIES, CartItem, Order } from '../types';
 import StaffAccessModal from './StaffAccessModal';
 
+const WHATSAPP_PHONE_DISPLAY = '0541292381';
+const WHATSAPP_PHONE_LINK = '233541292381';
+
 interface MenuCustomerViewProps {
   menuItems: MenuItem[];
   onOpenAdmin: () => void;
@@ -22,7 +25,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
 
   // Query parameters for table detection
   const [tableNumber, setTableNumber] = useState<string | null>(null);
-  const [diningOption, setDiningOption] = useState<'dine_in' | 'takeaway'>('dine_in');
+  const [diningOption, setDiningOption] = useState<'dine_in' | 'delivery'>('delivery');
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -254,13 +257,13 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
     }
 
     const total = getCartTotal();
-    const serviceTable = diningOption === 'dine_in' ? (tableNumber || 'General Dine-In') : 'TAKEAWAY / PICKUP';
+    const serviceLocation = diningOption === 'dine_in' ? (tableNumber || 'Table Service') : 'DELIVERY';
     
     // Create WhatsApp order log
     const newOrder: Order = {
       id: 'ord_' + Math.floor(Math.random() * 100000),
       customerName: customerName.trim(),
-      tableNumber: diningOption === 'dine_in' ? serviceTable : null,
+      tableNumber: diningOption === 'dine_in' ? serviceLocation : null,
       items: [...cart],
       totalAmount: total,
       notes: specialNotes.trim(),
@@ -272,7 +275,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
     let orderDetailsText = `*🔴 BRAND NEW ORDER - EASTERN HILLS RESTAURANT* \n`;
     orderDetailsText += `═════════════════════════\n`;
     orderDetailsText += `👤 *Customer Name:* ${newOrder.customerName}\n`;
-    orderDetailsText += `📍 *Service Type:* ${diningOption === 'dine_in' ? `Dine-In (${serviceTable})` : '🛍️ Takeaway / Pickup'}\n`;
+    orderDetailsText += `📍 *Service Type:* ${diningOption === 'dine_in' ? `Dine-In (${serviceLocation})` : '🚚 Delivery'}\n`;
     orderDetailsText += `⏰ *Time placed:* ${newDateStr()}\n`;
     orderDetailsText += `═════════════════════════\n\n`;
     
@@ -295,11 +298,9 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
     orderDetailsText += `📲 _Please reply to confirm receipt of this order and kitchen prep time. Chat with us here if you have any questions!_`;
 
     // WhatsApp API integration URL
-    // Target restaurant phone: +233242284055
-    const whatsappPhone = '+233242284055';
     // String clean for URL parameters
     const encodedMsg = encodeURIComponent(orderDetailsText);
-    const whatsappUrl = `https://wa.me/${whatsappPhone.replace('+', '')}?text=${encodedMsg}`;
+    const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE_LINK}?text=${encodedMsg}`;
 
     // Update orders log state & local storage
     const updatedOrders = [newOrder, ...sentOrders].slice(0, 50); // cap at last 50 orders
@@ -579,7 +580,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
       {/* FOOTER RAILS */}
       <footer className="bg-white border-t border-slate-200 mt-20 py-8 text-center text-slate-400 text-xs">
         <p className="font-semibold text-slate-600 uppercase tracking-wider">Eastern hills Restaurant</p>
-        <p className="mt-1 font-mono">Order Phone: +233 24 228 4055</p>
+        <p className="mt-1 font-mono">Order Phone: {WHATSAPP_PHONE_DISPLAY}</p>
         <p className="mt-4 text-[10px] text-slate-400">© 2026 QR Menu &amp; WhatsApp Integration. All rights reserved.</p>
       </footer>
 
@@ -839,8 +840,8 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
                 id="btn_success_modal_whatsapp_retry"
                 onClick={() => {
                   // Re-trigger order text
-                  let text = `*🔴 RE-SEND ORDER - EASTERN HILLS* \n\n👤 *Customer:* ${successOrder.customerName}\n💰 *Total:* ₵${successOrder.totalAmount.toFixed(2)}\n📍 *Location:* ${successOrder.tableNumber || 'Takeaway'}\n`;
-                  window.open(`https://wa.me/233242284055?text=${encodeURIComponent(text)}`, '_blank');
+                  let text = `*🔴 RE-SEND ORDER - EASTERN HILLS* \n\n👤 *Customer:* ${successOrder.customerName}\n💰 *Total:* ₵${successOrder.totalAmount.toFixed(2)}\n📍 *Location:* ${successOrder.tableNumber || 'Delivery'}\n`;
+                  window.open(`https://wa.me/${WHATSAPP_PHONE_LINK}?text=${encodeURIComponent(text)}`, '_blank');
                 }}
                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center space-x-1"
               >
