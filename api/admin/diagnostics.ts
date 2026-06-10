@@ -1,17 +1,12 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { assertAdminAuthorized, AdminAuthError } from '../../src/lib/server/adminAuth';
 import { getBlobDiagnostics } from '../../src/lib/server/blobStorage';
 import { getRemoteMenuBackendDiagnostics } from '../../src/lib/server/menuBackend';
 
 type DiagnosticsStatus = 'degraded' | 'ok';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed.' });
-  }
-
+export async function GET(request: Request) {
   try {
-    assertAdminAuthorized(req.headers['x-admin-pin'] as string | undefined);
+    assertAdminAuthorized(request.headers.get('x-admin-pin') ?? undefined);
 
     const [databaseResult, blobResult] = await Promise.allSettled([
       getRemoteMenuBackendDiagnostics(),
@@ -44,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const status: DiagnosticsStatus = database.ok && blob.ok ? 'ok' : 'degraded';
 
-    return res.status(200).json({
+    return Response.json({
       checkedAt: new Date().toISOString(),
       environment: process.env.VERCEL_ENV || process.env.NODE_ENV || 'development',
       runtime: 'nodejs',
@@ -54,10 +49,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (error) {
     if (error instanceof AdminAuthError) {
-      return res.status(401).json({ error: error.message });
+      return Response.json({ error: error.message }, { status: 401 });
     }
 
     console.error('Diagnostics API error', error);
-    return res.status(500).json({ error: 'Unable to run diagnostics.' });
+    return Response.json({ error: 'Unable to run diagnostics.' }, { status: 500 });
   }
+}
+
+export async function POST() {
+  return Response.json({ error: 'Method not allowed.' }, { status: 405 });
 }

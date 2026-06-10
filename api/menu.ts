@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getRemoteMenuItems, hasRemoteMenuBackend, saveRemoteMenuItems } from '../src/lib/server/menuBackend';
 import { assertAdminAuthorized, AdminAuthError } from '../src/lib/server/adminAuth';
 import { MenuItem } from '../src/types';
@@ -20,39 +19,46 @@ const isMenuItem = (value: unknown): value is MenuItem => {
   );
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export async function GET() {
   if (!hasRemoteMenuBackend()) {
-    return res.status(503).json({
+    return Response.json({
       error: 'Remote menu storage is not configured. Add DATABASE_URL or POSTGRES_URL on the server.',
-    });
+    }, { status: 503 });
   }
 
   try {
-    if (req.method === 'GET') {
-      const items = await getRemoteMenuItems();
-      return res.status(200).json({ items });
+    const items = await getRemoteMenuItems();
+    return Response.json({ items });
+  } catch (error) {
+    console.error('Menu API error', error);
+    return Response.json({ error: 'Unable to process the menu request.' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  if (!hasRemoteMenuBackend()) {
+    return Response.json({
+      error: 'Remote menu storage is not configured. Add DATABASE_URL or POSTGRES_URL on the server.',
+    }, { status: 503 });
+  }
+
+  try {
+    assertAdminAuthorized(request.headers.get('x-admin-pin') ?? undefined);
+
+    const body = await request.json().catch(() => null);
+    const items = body?.items;
+    if (!Array.isArray(items) || !items.every(isMenuItem)) {
+      return Response.json({ error: 'A valid menu items array is required.' }, { status: 400 });
     }
 
-    if (req.method === 'PUT') {
-      assertAdminAuthorized(req.headers['x-admin-pin'] as string | undefined);
-
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const items = body?.items;
-      if (!Array.isArray(items) || !items.every(isMenuItem)) {
-        return res.status(400).json({ error: 'A valid menu items array is required.' });
-      }
-
-      await saveRemoteMenuItems(items);
-      return res.status(200).json({ ok: true });
-    }
-
-    return res.status(405).json({ error: 'Method not allowed.' });
+    await saveRemoteMenuItems(items);
+    return Response.json({ ok: true });
   } catch (error) {
     if (error instanceof AdminAuthError) {
-      return res.status(401).json({ error: error.message });
+      return Response.json({ error: error.message }, { status: 401 });
     }
 
-    console.error('Menu API error', error);
-    return res.status(500).json({ error: 'Unable to process the menu request.' });
+    console.error('Menu API write error', error);
+    return Response.json({ error: 'Unable to process the menu request.' }, { status: 500 });
   }
 }
