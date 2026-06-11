@@ -460,12 +460,15 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
                   >
                     <div>
                       {/* Image header */}
-                      <div className="h-44 w-full bg-slate-100 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedItem(item)}>
+                      <div
+                        className="relative flex min-h-56 w-full cursor-pointer items-center justify-center overflow-hidden bg-slate-100 px-3 py-3 group"
+                        onClick={() => setSelectedItem(item)}
+                      >
                         <img 
                           src={item.image} 
                           alt={item.name} 
                           referrerPolicy="no-referrer"
-                          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                          className="max-h-72 w-auto max-w-full object-contain transition duration-300 group-hover:scale-[1.02]"
                         />
                         <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md text-slate-800 tracking-wider">
                           {item.category}
@@ -610,12 +613,12 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
       {selectedItem && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-100">
-            <div className="h-56 w-full bg-slate-100 relative">
+            <div className="relative flex min-h-56 w-full items-center justify-center bg-slate-100 px-4 py-4">
               <img 
                 src={selectedItem.image} 
                 alt={selectedItem.name} 
                 referrerPolicy="no-referrer"
-                className="h-full w-full object-cover"
+                className="max-h-[26rem] w-auto max-w-full object-contain"
               />
               <button
                 id="btn_product_modal_close"
@@ -692,8 +695,13 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
                       <div key={item.menuItem.id} className="flex items-center justify-between border-b border-slate-50 pb-4">
                         <div className="flex items-center space-x-3 min-w-0">
                           {/* Mini Photo */}
-                          <div className="h-12 w-12 rounded-xl bg-slate-100 overflow-hidden shrink-0 border">
-                            <img src={item.menuItem.image} alt={item.menuItem.name} referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+                          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border bg-slate-100 p-1 shrink-0">
+                            <img
+                              src={item.menuItem.image}
+                              alt={item.menuItem.name}
+                              referrerPolicy="no-referrer"
+                              className="max-h-full max-w-full object-contain"
+                            />
                           </div>
                           <div className="min-w-0">
                             <h4 className="text-xs font-bold text-slate-900 truncate pr-2">{item.menuItem.name}</h4>

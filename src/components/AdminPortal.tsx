@@ -725,12 +725,12 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
 
                     {/* Image Preview Box */}
                     {image && (
-                      <div className="relative mt-2 h-28 w-full bg-slate-100 rounded-xl overflow-hidden border border-slate-100 flex items-center justify-center">
+                      <div className="relative mt-2 flex min-h-28 w-full items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-slate-100 p-2">
                         <img 
                           src={image} 
                           alt="Pre-visual" 
                           referrerPolicy="no-referrer"
-                          className="h-full w-full object-cover"
+                          className="max-h-52 w-auto max-w-full object-contain"
                         />
                         <button
                           id="btn_clear_image"
@@ -999,12 +999,12 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
                         {/* Upper row: Img or placeholder / Action buttons */}
                         <div className="flex items-start space-x-3.5 mb-3.5">
                           {/* Photo */}
-                          <div className="h-16 w-16 bg-slate-100 rounded-xl overflow-hidden border border-slate-100 shrink-0 relative">
+                          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-slate-100 p-1">
                             <img 
                               src={item.image} 
                               alt={item.name} 
                               referrerPolicy="no-referrer"
-                              className="h-full w-full object-cover" 
+                              className="max-h-full max-w-full object-contain" 
                             />
                             {!item.available && (
                               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
