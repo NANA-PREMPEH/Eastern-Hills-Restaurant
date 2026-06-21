@@ -298,7 +298,7 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
     popupWindow.document.write(`
       <html>
         <head>
-          <title>Eastern hills Menu QR Code</title>
+          <title>Easternhills App QR Code</title>
           <style>
             body {
               font-family: 'Inter', system-ui, sans-serif;
@@ -384,7 +384,7 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
         </head>
         <body>
           <div class="card">
-            <div class="logo">EASTERN HILLS RESTAURANT</div>
+            <div class="logo">EASTERNHILLS FOOD &amp; TRANSPORT</div>
             <div class="tagline">Scan &amp; Order Instantly</div>
             <div class="subtitle">OUR DIGITAL MENU</div>
             <img class="qr-image" src="${qrImageSrc}" alt="QR Code" />
@@ -394,7 +394,7 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
               <strong>2.</strong> Browse our exquisite menu &amp; select items.<br>
               <strong>3.</strong> Send your order directly to our chef via WhatsApp!
             </div>
-            <div class="footer">Eastern hills Restaurant - Powered by Instant QR Menu</div>
+            <div class="footer">Easternhills Food &amp; Transport - Powered by Instant QR Menu</div>
             <button onclick="window.print()">Print Card</button>
           </div>
         </body>
@@ -409,7 +409,7 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
       printWindow.document.write(`
         <html>
           <head>
-            <title>Eastern hills Menu QR Code</title>
+            <title>Easternhills App QR Code</title>
             <style>
               body { 
                 font-family: 'Inter', system-ui, sans-serif; 
@@ -489,7 +489,7 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
           </head>
           <body>
             <div class="card">
-              <div class="logo">EASTERN HILLS RESTAURANT</div>
+              <div class="logo">EASTERNHILLS FOOD &amp; TRANSPORT</div>
               <div class="tagline">Scan &amp; Order Instantly</div>
               
               <div class="subtitle">OUR DIGITAL MENU</div>
@@ -502,7 +502,7 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
                 <strong>3.</strong> Send your order directly to our chef via WhatsApp!
               </div>
               
-              <div class="footer">Eastern hills Restaurant — Powered by Instant QR Menu</div>
+              <div class="footer">Easternhills Food &amp; Transport - Powered by Instant QR Menu</div>
               <button onclick="window.print()">Print Card</button>
             </div>
           </body>
@@ -793,11 +793,12 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
                 <div className="p-1.5 bg-red-50 text-red-600 rounded-lg">
                   <QrCode className="w-4 h-4" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">Restaurant Menu QR Code</h3>
+                <h3 className="text-base font-bold text-slate-900">Easternhills App QR Code</h3>
               </div>
 
               <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-                Generate a high-resolution, printable QR code flyer/card for your restaurant. Your customers can scan this QR code with their mobile cameras to immediately browse your menu and place orders.
+                Generate a high-resolution, printable QR code flyer/card for the app. Customers can
+                scan it, choose restaurant or car rental, and continue to the right service.
               </p>
 
               <div className="space-y-4">
@@ -1088,7 +1089,7 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100">
             <div className="text-center">
-              <h4 className="text-lg font-bold text-slate-800">Restaurant Menu QR Code</h4>
+              <h4 className="text-lg font-bold text-slate-800">Easternhills App QR Code</h4>
               <p className="text-xs text-slate-500 font-mono mt-0.5">Scan to access the application</p>
               
               <div className="my-6 p-4 bg-slate-50 rounded-2xl inline-block border border-slate-100 relative shadow-inner">
@@ -1100,7 +1101,7 @@ export default function AdminPortal({ adminPin, menuItems, onAdd, onUpdate, onDe
                 ) : generatedQRUrl ? (
                   <img 
                     src={generatedQRUrl} 
-                    alt="Restaurant Menu QR Code"
+                    alt="Easternhills App QR Code"
                     referrerPolicy="no-referrer"
                     className="w-56 h-56 mx-auto bg-white p-2 rounded-xl scale-100 transition-all hover:scale-105"
                   />

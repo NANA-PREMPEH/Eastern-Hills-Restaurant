@@ -5,8 +5,15 @@ interface StaffAccessModalProps {
   errorMessage: string;
   hasConfiguredPin: boolean;
   isOpen: boolean;
+  helperText?: string;
+  loginDescription?: string;
+  loginTitle?: string;
   pin: string;
   pinConfirmation: string;
+  setupDescription?: string;
+  setupTitle?: string;
+  submitLoginLabel?: string;
+  submitSetupLabel?: string;
   usesEnvironmentPin: boolean;
   onClose: () => void;
   onPinChange: (value: string) => void;
@@ -17,9 +24,16 @@ interface StaffAccessModalProps {
 export default function StaffAccessModal({
   errorMessage,
   hasConfiguredPin,
+  helperText,
   isOpen,
+  loginDescription,
+  loginTitle,
   pin,
   pinConfirmation,
+  setupDescription,
+  setupTitle,
+  submitLoginLabel,
+  submitSetupLabel,
   usesEnvironmentPin,
   onClose,
   onPinChange,
@@ -31,6 +45,18 @@ export default function StaffAccessModal({
   }
 
   const isSetupMode = !hasConfiguredPin;
+  const resolvedTitle = isSetupMode ? (setupTitle ?? 'Create Staff PIN') : (loginTitle ?? 'Staff Login');
+  const resolvedDescription = isSetupMode
+    ? (setupDescription ?? 'Set a private PIN for staff access on this device.')
+    : (loginDescription ?? 'Enter the hidden staff PIN to manage dishes and prices.');
+  const resolvedHelperText =
+    helperText ??
+    (usesEnvironmentPin
+      ? 'This app is using the staff PIN from VITE_ADMIN_PIN in your environment settings.'
+      : 'Staff can open this hidden login by tapping the restaurant name 5 times quickly or pressing Ctrl+Shift+A on desktop.');
+  const resolvedSubmitLabel = isSetupMode
+    ? (submitSetupLabel ?? 'Save PIN & Open')
+    : (submitLoginLabel ?? 'Open Admin');
 
   return (
     <div className="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -41,14 +67,8 @@ export default function StaffAccessModal({
               {isSetupMode ? <ShieldCheck className="h-5 w-5" /> : <LockKeyhole className="h-5 w-5" />}
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900">
-                {isSetupMode ? 'Create Staff PIN' : 'Staff Login'}
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                {isSetupMode
-                  ? 'Set a private PIN for staff access on this device.'
-                  : 'Enter the hidden staff PIN to manage dishes and prices.'}
-              </p>
+              <h3 className="text-lg font-bold text-slate-900">{resolvedTitle}</h3>
+              <p className="mt-1 text-sm text-slate-500">{resolvedDescription}</p>
             </div>
           </div>
 
@@ -109,9 +129,7 @@ export default function StaffAccessModal({
           )}
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-500">
-            {usesEnvironmentPin
-              ? 'This app is using the staff PIN from VITE_ADMIN_PIN in your environment settings.'
-              : 'Staff can open this hidden login by tapping the restaurant name 5 times quickly or pressing Ctrl+Shift+A on desktop.'}
+            {resolvedHelperText}
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -128,7 +146,7 @@ export default function StaffAccessModal({
               type="submit"
               className="flex-1 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
             >
-              {isSetupMode ? 'Save PIN & Open' : 'Open Admin'}
+              {resolvedSubmitLabel}
             </button>
           </div>
         </form>

@@ -3,17 +3,27 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { MenuItem } from './types';
+import React, { useEffect, useState } from 'react';
+import { CAR_FLEET, CarListing } from './data/carFleet';
 import { DEFAULT_MENU } from './data/defaultMenu';
-import MenuCustomerView from './components/MenuCustomerView';
 import AdminPortal from './components/AdminPortal';
-import { loadMenuItems, saveMenuItems } from './lib/menuStorage';
+import AppLandingPage from './components/LandingPage';
+import CarRentalAdminPortal from './components/CarRentalAdminPortal';
+import CarRentalView from './components/CarRentalView';
+import MenuCustomerView from './components/MenuCustomerView';
+import { loadCarFleet, saveCarFleet } from './lib/carFleetStorage';
 import { fetchRemoteMenuItems, MenuApiUnavailableError, saveRemoteMenuItems } from './lib/menuApi';
+import { loadMenuItems, saveMenuItems } from './lib/menuStorage';
+import { MenuItem } from './types';
+
+type ActiveService = 'home' | 'restaurant' | 'car_rental';
+type ActiveAdminPortal = 'car_rental' | 'restaurant' | null;
 
 export default function App() {
+  const [activeService, setActiveService] = useState<ActiveService>('home');
+  const [activeAdminPortal, setActiveAdminPortal] = useState<ActiveAdminPortal>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [carFleet, setCarFleet] = useState<CarListing[]>(CAR_FLEET);
   const [adminSessionPin, setAdminSessionPin] = useState<string | null>(null);
 
   const isLocalDevelopment =
@@ -29,6 +39,7 @@ export default function App() {
         if (!isCancelled) {
           setMenuItems(remoteMenu);
         }
+
         try {
           await saveMenuItems(remoteMenu);
         } catch (error) {
@@ -55,6 +66,30 @@ export default function App() {
     };
 
     void initializeMenu();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const initializeCarFleet = async () => {
+      try {
+        const storedFleet = await loadCarFleet(CAR_FLEET);
+        if (!isCancelled) {
+          setCarFleet(storedFleet);
+        }
+      } catch (error) {
+        console.error('Error loading saved car fleet, resetting to default.', error);
+        if (!isCancelled) {
+          setCarFleet(CAR_FLEET);
+        }
+      }
+    };
+
+    void initializeCarFleet();
 
     return () => {
       isCancelled = true;
@@ -93,46 +128,106 @@ export default function App() {
     }
   };
 
+  const saveAndSetCarFleet = async (updatedFleet: CarListing[], previousFleet: CarListing[]) => {
+    setCarFleet(updatedFleet);
+
+    try {
+      await saveCarFleet(updatedFleet);
+    } catch (error) {
+      console.error('Error saving updated car fleet.', error);
+      setCarFleet(previousFleet);
+      throw error;
+    }
+  };
+
   const handleAddItem = async (newItem: MenuItem) => {
     const updated = [newItem, ...menuItems];
     await saveAndSetMenu(updated, menuItems);
   };
 
   const handleUpdateItem = async (updatedItem: MenuItem) => {
-    const updated = menuItems.map(item => 
-      item.id === updatedItem.id ? updatedItem : item
-    );
+    const updated = menuItems.map((item) => (item.id === updatedItem.id ? updatedItem : item));
     await saveAndSetMenu(updated, menuItems);
   };
 
   const handleDeleteItem = async (id: string) => {
-    const updated = menuItems.filter(item => item.id !== id);
+    const updated = menuItems.filter((item) => item.id !== id);
     await saveAndSetMenu(updated, menuItems);
   };
 
-  return (
-    <div className="font-sans antialiased text-slate-950 bg-slate-50 min-h-screen">
-      {isAdminOpen ? (
-        <AdminPortal 
+  const handleAddCar = async (newCar: CarListing) => {
+    const updated = [newCar, ...carFleet];
+    await saveAndSetCarFleet(updated, carFleet);
+  };
+
+  const handleUpdateCar = async (updatedCar: CarListing) => {
+    const updated = carFleet.map((car) => (car.id === updatedCar.id ? updatedCar : car));
+    await saveAndSetCarFleet(updated, carFleet);
+  };
+
+  const handleDeleteCar = async (id: string) => {
+    const updated = carFleet.filter((car) => car.id !== id);
+    await saveAndSetCarFleet(updated, carFleet);
+  };
+
+  if (activeService === 'car_rental') {
+    if (activeAdminPortal === 'car_rental') {
+      return (
+        <CarRentalAdminPortal
+          carFleet={carFleet}
+          onAdd={handleAddCar}
+          onClose={() => {
+            setActiveAdminPortal(null);
+            setAdminSessionPin(null);
+          }}
+          onDelete={handleDeleteCar}
+          onUpdate={handleUpdateCar}
+        />
+      );
+    }
+
+    return (
+      <CarRentalView
+        carFleet={carFleet}
+        onBack={() => setActiveService('home')}
+        onOpenAdmin={(pin) => {
+          setAdminSessionPin(pin);
+          setActiveAdminPortal('car_rental');
+        }}
+        onGoToRestaurant={() => setActiveService('restaurant')}
+      />
+    );
+  }
+
+  if (activeService === 'restaurant') {
+    if (activeAdminPortal === 'restaurant') {
+      return (
+        <AdminPortal
           adminPin={adminSessionPin}
           menuItems={menuItems}
           onAdd={handleAddItem}
           onUpdate={handleUpdateItem}
           onDelete={handleDeleteItem}
           onClose={() => {
-            setIsAdminOpen(false);
+            setActiveAdminPortal(null);
             setAdminSessionPin(null);
           }}
         />
-      ) : (
-        <MenuCustomerView 
-          menuItems={menuItems}
-          onOpenAdmin={(pin) => {
-            setAdminSessionPin(pin);
-            setIsAdminOpen(true);
-          }}
-        />
-      )}
-    </div>
-  );
+      );
+    }
+
+    return (
+      <MenuCustomerView
+        menuItems={menuItems}
+        onOpenAdmin={(pin) => {
+          setAdminSessionPin(pin);
+          setActiveAdminPortal('restaurant');
+        }}
+        onGoHome={() => setActiveService('home')}
+        onGoToCarRental={() => setActiveService('car_rental')}
+      />
+    );
+  }
+
+  return <AppLandingPage onSelectService={setActiveService} />;
 }

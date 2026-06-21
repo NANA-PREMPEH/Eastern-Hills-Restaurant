@@ -5,9 +5,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { 
-  ShoppingBag, Search, Plus, Minus, ArrowRight, MessageSquare, 
+  ShoppingBag, Search, Plus, Minus, ArrowRight, MessageSquare, Car,
   Trash2, Sparkles, X, ChevronRight, CheckCircle2, Clock, 
-  MapPin, ClipboardIcon, AlertCircle, RefreshCw, Star
+  MapPin, ClipboardIcon, AlertCircle, RefreshCw, Star, ArrowLeft
 } from 'lucide-react';
 import { MenuItem, Category, CATEGORIES, CartItem, Order } from '../types';
 import StaffAccessModal from './StaffAccessModal';
@@ -18,10 +18,43 @@ const WHATSAPP_PHONE_LINK = '233541292381';
 interface MenuCustomerViewProps {
   menuItems: MenuItem[];
   onOpenAdmin: (pin: string) => void;
+  onGoHome: () => void;
+  onGoToCarRental: () => void;
 }
 
-export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustomerViewProps) {
+const readLocalStorageValue = (key: string) => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(key);
+  } catch (error) {
+    console.warn(`Unable to read localStorage key "${key}".`, error);
+    return null;
+  }
+};
+
+const writeLocalStorageValue = (key: string, value: string) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn(`Unable to save localStorage key "${key}".`, error);
+  }
+};
+
+export default function MenuCustomerView({
+  menuItems,
+  onOpenAdmin,
+  onGoHome,
+  onGoToCarRental,
+}: MenuCustomerViewProps) {
   const envAdminPin = import.meta.env.VITE_ADMIN_PIN?.trim() ?? '';
+  const safeMenuItems = Array.isArray(menuItems) ? menuItems : [];
 
   // Query parameters for table detection
   const [tableNumber, setTableNumber] = useState<string | null>(null);
@@ -41,18 +74,12 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
   // Active Checkout status
   const [sentOrders, setSentOrders] = useState<Order[]>([]);
   const [successOrder, setSuccessOrder] = useState<Order | null>(null);
-  const [showBillboard, setShowBillboard] = useState(() => {
-    return localStorage.getItem('sabor_show_billboard') !== 'false';
-  });
   const [isStaffAccessOpen, setIsStaffAccessOpen] = useState(false);
   const [adminPin, setAdminPin] = useState('');
   const [adminPinConfirmation, setAdminPinConfirmation] = useState('');
   const [adminErrorMessage, setAdminErrorMessage] = useState('');
   const [storedAdminPin, setStoredAdminPin] = useState(() => {
-    if (typeof window === 'undefined') {
-      return '';
-    }
-    return window.localStorage.getItem('eastern_hills_admin_pin')?.trim() ?? '';
+    return readLocalStorageValue('eastern_hills_admin_pin')?.trim() ?? '';
   });
 
   const tapCountRef = useRef(0);
@@ -73,7 +100,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
     }
     
     // Load sent orders log from local storage
-    const saved = localStorage.getItem('sabor_sent_orders');
+    const saved = readLocalStorageValue('sabor_sent_orders');
     if (saved) {
       try {
         setSentOrders(JSON.parse(saved));
@@ -188,7 +215,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
         return;
       }
 
-      window.localStorage.setItem('eastern_hills_admin_pin', normalizedPin);
+      writeLocalStorageValue('eastern_hills_admin_pin', normalizedPin);
       setStoredAdminPin(normalizedPin);
       closeStaffAccess();
       onOpenAdmin(normalizedPin);
@@ -272,7 +299,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
     };
 
     // Construct magnificent pre-filled WhatsApp text
-    let orderDetailsText = `*🔴 BRAND NEW ORDER - EASTERN HILLS RESTAURANT* \n`;
+    let orderDetailsText = `*NEW ORDER - EASTERNHILLS FOOD* \n`;
     orderDetailsText += `═════════════════════════\n`;
     orderDetailsText += `👤 *Customer Name:* ${newOrder.customerName}\n`;
     orderDetailsText += `📍 *Service Type:* ${diningOption === 'dine_in' ? `Dine-In (${serviceLocation})` : '🚚 Delivery'}\n`;
@@ -305,7 +332,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
     // Update orders log state & local storage
     const updatedOrders = [newOrder, ...sentOrders].slice(0, 50); // cap at last 50 orders
     setSentOrders(updatedOrders);
-    localStorage.setItem('sabor_sent_orders', JSON.stringify(updatedOrders));
+    writeLocalStorageValue('sabor_sent_orders', JSON.stringify(updatedOrders));
 
     // Clear cart & show gorgeous confirmation modal inside the app
     setCart([]);
@@ -323,7 +350,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
   };
 
   // Filter items based on active criteria
-  const availableMenuItems = menuItems.filter(item => item.available);
+  const availableMenuItems = safeMenuItems.filter(item => item.available);
   
   const filteredMenuItems = availableMenuItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -337,32 +364,60 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
       {/* Main Luxury Header */}
       <header className="bg-white border-b border-slate-100 shadow-xs sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button
-            id="btn_hidden_admin_trigger"
-            type="button"
-            onClick={handleHiddenAdminTap}
-            onPointerDown={handleSecretPointerDown}
-            onPointerUp={handleSecretPointerUp}
-            onPointerLeave={handleSecretPointerUp}
-            onPointerCancel={handleSecretPointerUp}
-            className="flex flex-col border-0 bg-transparent p-0 text-left cursor-default focus:outline-none"
-            aria-label="Eastern Hills Restaurant"
-          >
-            <span className="text-lg sm:text-xl font-black uppercase tracking-tight text-red-600 font-sans flex items-center space-x-1">
-              <span>EASTERN HILLS</span>
-              <span className="text-slate-800 font-light">RESTAURANT</span>
-            </span>
-            
-            {/* Table Number indicator */}
-            {tableNumber ? (
-              <div className="flex items-center space-x-1 mt-0.5">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
-                <span className="text-xs font-bold font-mono text-emerald-600">Ordering from Table {tableNumber}</span>
-              </div>
-            ) : (
-              <span className="text-[11px] text-slate-500 font-medium">Digital QR Code Ordering &amp; Chat App</span>
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                id="btn_restaurant_go_home"
+                type="button"
+                onClick={onGoHome}
+                className="flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg border border-slate-200"
+                aria-label="Back to home"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                <span className="hidden sm:inline">Home</span>
+              </button>
+
+              <button
+                id="btn_go_to_car_rental_portal"
+                type="button"
+                onClick={onGoToCarRental}
+                className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:text-amber-900 transition-colors bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg border border-amber-200"
+                aria-label="Open car rental portal"
+              >
+                <Car className="w-3 h-3" />
+                <span className="hidden sm:inline">Car Rental Portal</span>
+                <span className="sm:hidden">Rental</span>
+              </button>
+            </div>
+
+            <button
+              id="btn_hidden_admin_trigger"
+              type="button"
+              onClick={handleHiddenAdminTap}
+              onPointerDown={handleSecretPointerDown}
+              onPointerUp={handleSecretPointerUp}
+              onPointerLeave={handleSecretPointerUp}
+              onPointerCancel={handleSecretPointerUp}
+              className="flex flex-col border-0 bg-transparent p-0 text-left cursor-default focus:outline-none"
+              aria-label="Easternhills Food & Transport"
+            >
+              <span className="text-lg sm:text-xl font-black uppercase tracking-tight font-sans flex items-center space-x-1">
+                <span className="text-red-600">EASTERNHILLS</span>
+                <span className="text-slate-300 font-light">&middot;</span>
+                <span className="text-slate-800 font-light text-sm sm:text-base">FOOD</span>
+              </span>
+              
+              {/* Table Number indicator */}
+              {tableNumber ? (
+                <div className="flex items-center space-x-1 mt-0.5">
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
+                  <span className="text-xs font-bold font-mono text-emerald-600">Ordering from Table {tableNumber}</span>
+                </div>
+              ) : (
+                <span className="text-[11px] text-slate-500 font-medium">Food ordering portal and WhatsApp support</span>
+              )}
+            </button>
+          </div>
 
 
 
@@ -582,9 +637,10 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
 
       {/* FOOTER RAILS */}
       <footer className="bg-white border-t border-slate-200 mt-20 py-8 text-center text-slate-400 text-xs">
-        <p className="font-semibold text-slate-600 uppercase tracking-wider">Eastern hills Restaurant</p>
+        <p className="font-semibold text-slate-600 uppercase tracking-wider">Easternhills Food &amp; Transport</p>
+        <p className="text-slate-500 text-[11px] mt-0.5 tracking-wide">Food service</p>
         <p className="mt-1 font-mono">Order Phone: {WHATSAPP_PHONE_DISPLAY}</p>
-        <p className="mt-4 text-[10px] text-slate-400">© 2026 QR Menu &amp; WhatsApp Integration. All rights reserved.</p>
+        <p className="mt-4 text-[10px] text-slate-400">© {new Date().getFullYear()} Easternhills Food &amp; Transport. All rights reserved.</p>
       </footer>
 
       {/* BOTTOM FLOAT MOBILE CART BUTTON */}
@@ -848,7 +904,7 @@ export default function MenuCustomerView({ menuItems, onOpenAdmin }: MenuCustome
                 id="btn_success_modal_whatsapp_retry"
                 onClick={() => {
                   // Re-trigger order text
-                  let text = `*🔴 RE-SEND ORDER - EASTERN HILLS* \n\n👤 *Customer:* ${successOrder.customerName}\n💰 *Total:* ₵${successOrder.totalAmount.toFixed(2)}\n📍 *Location:* ${successOrder.tableNumber || 'Delivery'}\n`;
+                  let text = `*RE-SEND ORDER - EASTERNHILLS FOOD* \n\n👤 *Customer:* ${successOrder.customerName}\n💰 *Total:* ₵${successOrder.totalAmount.toFixed(2)}\n📍 *Location:* ${successOrder.tableNumber || 'Delivery'}\n`;
                   window.open(`https://wa.me/${WHATSAPP_PHONE_LINK}?text=${encodeURIComponent(text)}`, '_blank');
                 }}
                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center space-x-1"

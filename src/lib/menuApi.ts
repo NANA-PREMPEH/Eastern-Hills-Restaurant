@@ -64,6 +64,7 @@ const requestJson = async <T>(input: RequestInfo | URL, init?: RequestInit) => {
   }
 
   const payload = await parseResponsePayload(response);
+  const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
 
   if (response.status === 404 || response.status === 405 || response.status === 503) {
     throw new MenuApiUnavailableError(payload?.error || 'The backend API is unavailable.');
@@ -73,6 +74,10 @@ const requestJson = async <T>(input: RequestInfo | URL, init?: RequestInit) => {
     throw new MenuApiError(payload?.error || 'The request failed.', response.status);
   }
 
+  if (!contentType.includes('application/json')) {
+    throw new MenuApiUnavailableError('The backend API returned an unexpected response.');
+  }
+
   return payload as T;
 };
 
@@ -80,6 +85,11 @@ export const fetchRemoteMenuItems = async () => {
   const payload = await requestJson<{ items: MenuItem[] }>('/api/menu', {
     cache: 'no-store',
   });
+
+  if (!Array.isArray(payload.items)) {
+    throw new MenuApiUnavailableError('The backend API returned an invalid menu payload.');
+  }
+
   return payload.items;
 };
 
