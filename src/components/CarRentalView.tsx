@@ -65,7 +65,9 @@ export default function CarRentalView({
   onGoToRestaurant,
 }: CarRentalViewProps) {
   const envAdminPin = import.meta.env.VITE_ADMIN_PIN?.trim() ?? '';
-  const safeCarFleet = Array.isArray(carFleet) ? carFleet : [];
+  const safeCarFleet = Array.isArray(carFleet)
+    ? carFleet.filter((car) => car.enabled !== false)
+    : [];
   const [isStaffAccessOpen, setIsStaffAccessOpen] = useState(false);
   const [adminPin, setAdminPin] = useState('');
   const [adminPinConfirmation, setAdminPinConfirmation] = useState('');

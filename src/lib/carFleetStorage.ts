@@ -4,7 +4,9 @@ const CAR_FLEET_STORAGE_KEY = 'eastern_hills_car_fleet';
 
 const isBrowser = () => typeof window !== 'undefined';
 
-const isCarListing = (value: unknown): value is CarListing => {
+type StoredCarListing = Omit<CarListing, 'enabled'> & { enabled?: boolean };
+
+const isCarListing = (value: unknown): value is StoredCarListing => {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -19,18 +21,24 @@ const isCarListing = (value: unknown): value is CarListing => {
     typeof listing.transmission === 'string' &&
     Array.isArray(listing.features) &&
     listing.features.every((feature) => typeof feature === 'string') &&
+    (typeof listing.enabled === 'boolean' || typeof listing.enabled === 'undefined') &&
     (typeof listing.image === 'string' || typeof listing.image === 'undefined') &&
     typeof listing.emoji === 'string' &&
     typeof listing.colorClass === 'string'
   );
 };
 
+const normalizeCarListing = (listing: StoredCarListing): CarListing => ({
+  ...listing,
+  enabled: listing.enabled !== false,
+});
+
 const normalizeFleet = (value: unknown) => {
   if (!Array.isArray(value)) {
     return CAR_FLEET;
   }
 
-  const fleet = value.filter(isCarListing);
+  const fleet = value.filter(isCarListing).map(normalizeCarListing);
   return fleet.length > 0 ? fleet : CAR_FLEET;
 };
 

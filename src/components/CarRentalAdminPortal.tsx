@@ -9,6 +9,8 @@ import {
   ArrowLeft,
   Car,
   CheckCircle2,
+  Eye,
+  EyeOff,
   Edit2,
   Plus,
   Save,
@@ -38,9 +40,12 @@ const COLOR_OPTIONS = [
   { label: 'Orange', value: 'from-orange-600 to-orange-800' },
 ];
 
+const isCarEnabled = (car: CarListing) => car.enabled !== false;
+
 const getDefaultDraft = () => ({
   colorClass: COLOR_OPTIONS[0].value,
   dailyRate: '350',
+  enabled: true,
   emoji: '🚗',
   featuresText: 'Air Conditioning, Bluetooth',
   image: '',
@@ -68,6 +73,10 @@ export default function CarRentalAdminPortal({
     return COLOR_OPTIONS.find((option) => option.value === draft.colorClass)?.label ?? 'Custom';
   }, [draft.colorClass]);
 
+  const enabledVehicleCount = useMemo(() => {
+    return carFleet.filter(isCarEnabled).length;
+  }, [carFleet]);
+
   const resetForm = () => {
     setDraft(getDefaultDraft());
     setEditingId(null);
@@ -89,6 +98,7 @@ export default function CarRentalAdminPortal({
     setDraft({
       colorClass: car.colorClass,
       dailyRate: String(car.dailyRate),
+      enabled: isCarEnabled(car),
       emoji: car.emoji,
       featuresText: car.features.join(', '),
       image: car.image ?? '',
@@ -156,6 +166,7 @@ export default function CarRentalAdminPortal({
     return {
       colorClass: draft.colorClass,
       dailyRate,
+      enabled: draft.enabled,
       emoji: draft.emoji.trim(),
       features,
       id: editingId ?? `car_${Date.now()}`,
@@ -205,6 +216,30 @@ export default function CarRentalAdminPortal({
       showFeedback(`Removed ${car.name}.`, 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to remove this vehicle.';
+      showFeedback(message, 'error');
+    }
+  };
+
+  const handleToggleAvailability = async (car: CarListing) => {
+    const nextEnabled = !isCarEnabled(car);
+
+    try {
+      await onUpdate({
+        ...car,
+        enabled: nextEnabled,
+      });
+
+      if (editingId === car.id) {
+        setDraft((current) => ({ ...current, enabled: nextEnabled }));
+      }
+
+      showFeedback(
+        `${car.name} ${nextEnabled ? 'is now visible to customers.' : 'has been disabled from the customer view.'}`,
+        'success'
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to update this vehicle status.';
       showFeedback(message, 'error');
     }
   };
@@ -498,6 +533,9 @@ export default function CarRentalAdminPortal({
                 <h2 className="mt-1 text-xl font-black text-slate-900">
                   {carFleet.length} vehicle{carFleet.length === 1 ? '' : 's'}
                 </h2>
+                <p className="mt-1 text-xs font-medium text-slate-500">
+                  {enabledVehicleCount} active, {carFleet.length - enabledVehicleCount} disabled
+                </p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
@@ -509,14 +547,27 @@ export default function CarRentalAdminPortal({
               {carFleet.map((car) => (
                 <article
                   key={car.id}
-                  className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50"
+                  className={`overflow-hidden rounded-[1.5rem] border bg-slate-50 ${
+                    isCarEnabled(car) ? 'border-slate-200' : 'border-amber-200 opacity-80'
+                  }`}
                 >
                   <div className={`bg-gradient-to-br ${car.colorClass} px-5 py-4 text-white`}>
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">
-                          {car.type}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/70">
+                            {car.type}
+                          </p>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] ${
+                              isCarEnabled(car)
+                                ? 'bg-emerald-400/20 text-emerald-50'
+                                : 'bg-black/20 text-amber-100'
+                            }`}
+                          >
+                            {isCarEnabled(car) ? 'Active' : 'Disabled'}
+                          </span>
+                        </div>
                         <h3 className="mt-1 text-lg font-black">{car.name}</h3>
                       </div>
                       {car.image ? (
@@ -564,21 +615,34 @@ export default function CarRentalAdminPortal({
                       ))}
                     </div>
 
-                    <div className="mt-5 flex gap-3">
+                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
                       <button
                         id={`btn_edit_car_${car.id}`}
                         type="button"
                         onClick={() => handleEdit(car)}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                        className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                       >
                         <Edit2 className="h-4 w-4" />
                         Edit
                       </button>
                       <button
+                        id={`btn_toggle_car_${car.id}`}
+                        type="button"
+                        onClick={() => handleToggleAvailability(car)}
+                        className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                          isCarEnabled(car)
+                            ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                            : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                        }`}
+                      >
+                        {isCarEnabled(car) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {isCarEnabled(car) ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
                         id={`btn_delete_car_${car.id}`}
                         type="button"
                         onClick={() => handleDelete(car)}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+                        className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
                       >
                         <Trash2 className="h-4 w-4" />
                         Delete
