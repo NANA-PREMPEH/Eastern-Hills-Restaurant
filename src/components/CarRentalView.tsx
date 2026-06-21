@@ -247,7 +247,7 @@ export default function CarRentalView({
                 className="flex items-center gap-1.5 rounded-xl border border-red-400/25 bg-red-500/12 px-3 py-2 text-xs font-semibold text-red-100 transition-colors hover:bg-red-500/20 hover:text-white"
               >
                 <Utensils className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Food Portal</span>
+                <span className="hidden sm:inline">Food Oder</span>
                 <span className="sm:hidden">Food</span>
               </button>
             </div>
@@ -371,20 +371,27 @@ export default function CarRentalView({
                 key={car.id}
                 className="flex flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/5 shadow-xl shadow-black/15 transition duration-300 hover:-translate-y-1 hover:border-amber-300/35"
               >
-                <div className={`relative flex items-center justify-center bg-gradient-to-br ${car.colorClass} px-6 py-9`}>
-                  <div className="absolute inset-0 bg-black/18" />
-                  <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-black/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/80">
+                <div className={`relative overflow-hidden bg-gradient-to-br ${car.colorClass}`}>
+                  <span className="absolute right-4 top-4 z-10 rounded-full border border-white/15 bg-black/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-white/80">
                     {car.type}
                   </span>
                   {car.image ? (
-                    <img
-                      src={car.image}
-                      alt={car.name}
-                      className="relative max-h-44 w-auto max-w-full rounded-2xl object-contain drop-shadow-xl"
-                      referrerPolicy="no-referrer"
-                    />
+                    <>
+                      <img
+                        src={car.image}
+                        alt={car.name}
+                        className="h-72 w-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-black/15" />
+                    </>
                   ) : (
-                    <span className="relative text-7xl drop-shadow-xl">{car.emoji}</span>
+                    <>
+                      <div className="absolute inset-0 bg-black/18" />
+                      <div className="relative flex h-72 items-center justify-center px-6 py-9">
+                        <span className="text-7xl drop-shadow-xl">{car.emoji}</span>
+                      </div>
+                    </>
                   )}
                 </div>
 

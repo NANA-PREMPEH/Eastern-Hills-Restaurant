@@ -458,12 +458,14 @@ export default function CarRentalAdminPortal({
                       <h3 className="mt-2 text-xl font-black">{draft.name || 'Vehicle Name'}</h3>
                     </div>
                     {draft.image ? (
-                      <img
-                        src={draft.image}
-                        alt={draft.name || 'Vehicle preview'}
-                        className="max-h-24 w-auto max-w-[8rem] rounded-2xl object-contain"
-                        referrerPolicy="no-referrer"
-                      />
+                      <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-black/15">
+                        <img
+                          src={draft.image}
+                          alt={draft.name || 'Vehicle preview'}
+                          className="h-full w-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
                     ) : (
                       <div className="text-5xl">{draft.emoji || '🚗'}</div>
                     )}
@@ -518,12 +520,14 @@ export default function CarRentalAdminPortal({
                         <h3 className="mt-1 text-lg font-black">{car.name}</h3>
                       </div>
                       {car.image ? (
-                        <img
-                          src={car.image}
-                          alt={car.name}
-                          className="max-h-20 w-auto max-w-[6rem] rounded-2xl object-contain"
-                          referrerPolicy="no-referrer"
-                        />
+                        <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-black/15">
+                          <img
+                            src={car.image}
+                            alt={car.name}
+                            className="h-full w-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
                       ) : (
                         <div className="text-4xl">{car.emoji}</div>
                       )}

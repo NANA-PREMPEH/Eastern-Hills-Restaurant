@@ -174,7 +174,10 @@ Create a `.env.local` file for local development or configure these in Vercel:
 VITE_ADMIN_PIN="1234"
 ADMIN_PIN="1234"
 DATABASE_URL="postgresql://user:password@host/database?sslmode=require"
+POSTGRES_URL="postgresql://user:password@host/database?sslmode=require"
 BLOB_READ_WRITE_TOKEN="vercel_blob_rw_xxxxx"
+BLOB_STORE_ID="store_xxxxx"
+BLOB_WEBHOOK_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
 ```
 
 ### Variable details
@@ -189,6 +192,10 @@ BLOB_READ_WRITE_TOKEN="vercel_blob_rw_xxxxx"
   Alternate Postgres variable also supported by the backend
 - `BLOB_READ_WRITE_TOKEN`
   Required for remote dish image uploads to Vercel Blob
+- `BLOB_STORE_ID`
+  Added automatically by the Vercel Blob integration; not used directly by the current app code
+- `BLOB_WEBHOOK_PUBLIC_KEY`
+  Added automatically by the Vercel Blob integration; not used directly by the current server-upload flow
 
 For the smoothest staff flow, use the same value for `VITE_ADMIN_PIN` and `ADMIN_PIN`.
 
@@ -230,13 +237,20 @@ Open `http://localhost:3000`.
 To enable the shared menu backend and remote image uploads:
 
 1. Create a Vercel project for this repository.
-2. Add a Postgres integration such as Neon.
-3. Confirm the project has `DATABASE_URL` or `POSTGRES_URL`.
-4. Create or connect a Vercel Blob store.
-5. Confirm the project has `BLOB_READ_WRITE_TOKEN`.
-6. Set `ADMIN_PIN`.
-7. Optionally set `VITE_ADMIN_PIN` to the same value.
-8. Deploy or redeploy the project.
+2. Keep the Framework Preset as Vite or allow auto-detection, and let Vercel build the app with `npm run build`.
+3. Add a Postgres integration such as Neon.
+4. Confirm the project has either `DATABASE_URL` or `POSTGRES_URL`.
+5. Create or connect a Vercel Blob store.
+6. Confirm the project has `BLOB_READ_WRITE_TOKEN`.
+7. Leave `BLOB_STORE_ID` and `BLOB_WEBHOOK_PUBLIC_KEY` in place if Blob already added them to the project.
+8. Set `ADMIN_PIN`.
+9. Optionally set `VITE_ADMIN_PIN` to the same value.
+10. Deploy or redeploy the project.
+
+This repository now includes [vercel.json](vercel.json), which does two important things for production:
+
+- Uses `dist` as the static output directory for the Vite build
+- Rewrites unknown frontend routes to `index.html` so SPA deep links keep working on Vercel while `/api/*` functions continue to resolve from the filesystem
 
 To pull Vercel environment variables into local development:
 
@@ -281,4 +295,3 @@ scripts/
 - The built-in QR generator currently points to the main app entry URL
 - Table-aware dine-in mode works when the app is opened with a `?table=...` query parameter
 - There is no automated test suite in this repository at the moment; `npm run lint` is the main verification command
-

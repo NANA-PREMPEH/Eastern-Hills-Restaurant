@@ -382,10 +382,10 @@ export default function MenuCustomerView({
                 type="button"
                 onClick={onGoToCarRental}
                 className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:text-amber-900 transition-colors bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg border border-amber-200"
-                aria-label="Open car rental portal"
+                aria-label="Open transport rental"
               >
                 <Car className="w-3 h-3" />
-                <span className="hidden sm:inline">Car Rental Portal</span>
+                <span className="hidden sm:inline">Transport Rental</span>
                 <span className="sm:hidden">Rental</span>
               </button>
             </div>

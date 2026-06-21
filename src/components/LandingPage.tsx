@@ -15,8 +15,8 @@ interface LandingPageProps {
 const SERVICE_CARDS = [
   {
     id: 'restaurant' as const,
-    title: 'Restaurant Portal',
-    heading: 'Food portal',
+    title: 'Food Oder',
+    heading: 'Food Oder',
     description:
       'Browse the menu, add dishes to your basket, and place your order directly on WhatsApp.',
     contact: 'Restaurant WhatsApp: 0541292381',
@@ -28,8 +28,8 @@ const SERVICE_CARDS = [
   },
   {
     id: 'car_rental' as const,
-    title: 'Car Rental Portal',
-    heading: 'Transport portal',
+    title: 'Transport Rental',
+    heading: 'Transport Rental',
     description:
       'Choose from the available fleet and chat with the transport team on WhatsApp for quick booking.',
     contact: 'Rental WhatsApp: 0555029441',
@@ -72,7 +72,7 @@ export default function LandingPage({ onSelectService }: LandingPageProps) {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
               <MessageSquare className="h-3.5 w-3.5 text-emerald-400" />
-              Choose your portal on the main page
+              Choose your service on the main page
             </div>
 
             <h2 className="mt-6 max-w-3xl text-4xl font-black uppercase tracking-tight text-white sm:text-6xl">
@@ -81,8 +81,8 @@ export default function LandingPage({ onSelectService }: LandingPageProps) {
               Two main services.
             </h2>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
-              Customers can now choose between the restaurant portal and the car rental portal as
-              soon as they arrive on the main page.
+              Customers can now choose between food ordering and transport rental as soon as they
+              arrive on the main page.
             </p>
 
           </div>
@@ -120,7 +120,7 @@ export default function LandingPage({ onSelectService }: LandingPageProps) {
                   </div>
 
                   <div className={`mt-7 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] ${service.ctaClasses}`}>
-                    <span>{service.id === 'restaurant' ? 'Enter food portal' : 'Open rental portal'}</span>
+                    <span>{service.id === 'restaurant' ? 'Enter Food Oder' : 'Open Transport Rental'}</span>
                     <ChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </div>
                 </button>
