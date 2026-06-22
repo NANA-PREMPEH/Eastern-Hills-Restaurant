@@ -11,6 +11,11 @@ import AppLandingPage from './components/LandingPage';
 import CarRentalAdminPortal from './components/CarRentalAdminPortal';
 import CarRentalView from './components/CarRentalView';
 import MenuCustomerView from './components/MenuCustomerView';
+import {
+  CarFleetApiUnavailableError,
+  fetchRemoteCarFleet,
+  saveRemoteCarFleet,
+} from './lib/carFleetApi';
 import { loadCarFleet, saveCarFleet } from './lib/carFleetStorage';
 import { fetchRemoteMenuItems, MenuApiUnavailableError, saveRemoteMenuItems } from './lib/menuApi';
 import { loadMenuItems, saveMenuItems } from './lib/menuStorage';
@@ -77,6 +82,24 @@ export default function App() {
 
     const initializeCarFleet = async () => {
       try {
+        const remoteFleet = await fetchRemoteCarFleet();
+        if (!isCancelled) {
+          setCarFleet(remoteFleet);
+        }
+
+        try {
+          await saveCarFleet(remoteFleet);
+        } catch (error) {
+          console.warn('Unable to refresh the local mirror from the remote car fleet.', error);
+        }
+        return;
+      } catch (error) {
+        if (!(error instanceof CarFleetApiUnavailableError)) {
+          console.error('Error loading remote car fleet.', error);
+        }
+      }
+
+      try {
         const storedFleet = await loadCarFleet(CAR_FLEET);
         if (!isCancelled) {
           setCarFleet(storedFleet);
@@ -130,9 +153,29 @@ export default function App() {
 
   const saveAndSetCarFleet = async (updatedFleet: CarListing[], previousFleet: CarListing[]) => {
     setCarFleet(updatedFleet);
+    let savedRemotely = false;
 
     try {
-      await saveCarFleet(updatedFleet);
+      if (adminSessionPin) {
+        try {
+          await saveRemoteCarFleet(updatedFleet, adminSessionPin);
+          savedRemotely = true;
+        } catch (error) {
+          if (!(error instanceof CarFleetApiUnavailableError) || !isLocalDevelopment) {
+            throw error;
+          }
+        }
+      }
+
+      try {
+        await saveCarFleet(updatedFleet);
+      } catch (error) {
+        if (savedRemotely) {
+          console.warn('Remote save succeeded, but local car fleet mirror persistence failed.', error);
+          return;
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Error saving updated car fleet.', error);
       setCarFleet(previousFleet);
@@ -174,6 +217,7 @@ export default function App() {
     if (activeAdminPortal === 'car_rental') {
       return (
         <CarRentalAdminPortal
+          adminPin={adminSessionPin}
           carFleet={carFleet}
           onAdd={handleAddCar}
           onClose={() => {

@@ -91,10 +91,14 @@ The application includes two customer experiences and two hidden staff/admin exp
 - Add new vehicles
 - Edit existing vehicles
 - Delete vehicles
+- Disable or re-enable vehicles without deleting them
 - Manage vehicle name, type, daily rate, seats, transmission, features, image, emoji, and card accent color
 - Upload a vehicle image up to 2 MB
+- Upload vehicle images to Vercel Blob when backend storage is configured
+- Fall back to local-only image persistence during local development if backend image upload is unavailable
 - Preview the vehicle card before saving
 - Save fleet changes locally in browser storage
+- Sync fleet changes across browsers when the shared backend is available
 
 ## Current default content
 
@@ -127,9 +131,12 @@ Default fleet examples include:
 
 ### Car fleet
 
-- The car fleet is currently stored locally in `localStorage`
+- On startup, the app tries to fetch the car fleet from `/api/car-fleet`
+- If remote car fleet data is available, it becomes the live source of truth
+- Remote car fleet data is mirrored locally for offline-friendly fallback
+- If the API is unavailable, the app loads the fleet from browser storage
 - If no saved fleet exists, the app loads the default fleet
-- Car rental inventory does not currently sync to the Vercel backend
+- Local car fleet persistence uses `localStorage` as a mirror and fallback cache
 
 ### Staff PIN behavior
 
@@ -139,7 +146,7 @@ Default fleet examples include:
 
 ## Backend and API behavior
 
-The server-side API is used for the restaurant menu only.
+The server-side API is used for the restaurant menu and car rental fleet.
 
 ### `GET /api/menu`
 
@@ -165,6 +172,24 @@ The server-side API is used for the restaurant menu only.
 - Checks database connectivity
 - Checks Blob storage connectivity
 - Returns environment, runtime, health status, menu item count, last update time, and Blob sample info
+
+### `GET /api/car-fleet`
+
+- Returns the shared car fleet from Postgres
+- Responds with `503` when remote fleet storage is not configured
+- Seeds the default fleet into the database automatically if no fleet row exists yet
+
+### `PUT /api/car-fleet`
+
+- Saves the full shared car fleet payload
+- Requires the `x-admin-pin` header
+- Validates that the submitted payload is a proper car listing array
+
+### `POST /api/car-fleet/upload`
+
+- Uploads a vehicle image to Vercel Blob
+- Requires the `x-admin-pin` header
+- Expects a data URL payload plus file name and optional content type
 
 ## Environment variables
 
@@ -291,7 +316,7 @@ scripts/
 ## Notes and current scope
 
 - Restaurant menu data supports shared backend persistence when the server is configured
-- Car rental data is currently local-only and does not sync across devices
+- Car rental fleet data also supports shared backend persistence when the server is configured
 - The built-in QR generator currently points to the main app entry URL
 - Table-aware dine-in mode works when the app is opened with a `?table=...` query parameter
 - There is no automated test suite in this repository at the moment; `npm run lint` is the main verification command

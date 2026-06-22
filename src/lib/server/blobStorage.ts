@@ -39,12 +39,39 @@ export const uploadMenuImageToBlob = async ({
   dataUrl,
   fileName,
 }: UploadImageOptions) => {
+  return uploadImageToBlob({
+    contentType,
+    dataUrl,
+    fileName,
+    prefix: 'menu-images',
+  });
+};
+
+export const uploadCarImageToBlob = async ({
+  contentType,
+  dataUrl,
+  fileName,
+}: UploadImageOptions) => {
+  return uploadImageToBlob({
+    contentType,
+    dataUrl,
+    fileName,
+    prefix: 'car-images',
+  });
+};
+
+const uploadImageToBlob = async ({
+  contentType,
+  dataUrl,
+  fileName,
+  prefix,
+}: UploadImageOptions & { prefix: string }) => {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     throw new Error('BLOB_READ_WRITE_TOKEN is not configured.');
   }
 
   const { buffer, contentType: detectedContentType } = parseDataUrl(dataUrl, contentType);
-  const pathname = `menu-images/${Date.now()}-${randomUUID()}-${sanitizeFileName(fileName)}`;
+  const pathname = `${prefix}/${Date.now()}-${randomUUID()}-${sanitizeFileName(fileName)}`;
   const blob = await put(pathname, buffer, {
     access: 'public',
     addRandomSuffix: false,

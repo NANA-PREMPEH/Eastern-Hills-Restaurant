@@ -5,6 +5,12 @@
 
 import React, { useMemo, useState } from 'react';
 import {
+  CarFleetApiError,
+  CarFleetApiUnavailableError,
+  RemoteCarImageUploadPayload,
+  uploadRemoteCarImage,
+} from '../lib/carFleetApi';
+import {
   AlertCircle,
   ArrowLeft,
   Car,
@@ -19,6 +25,7 @@ import {
 import { CarListing } from '../data/carFleet';
 
 interface CarRentalAdminPortalProps {
+  adminPin: null | string;
   carFleet: CarListing[];
   onAdd: (car: CarListing) => Promise<void> | void;
   onClose: () => void;
@@ -56,6 +63,7 @@ const getDefaultDraft = () => ({
 });
 
 export default function CarRentalAdminPortal({
+  adminPin,
   carFleet,
   onAdd,
   onClose,
@@ -63,6 +71,7 @@ export default function CarRentalAdminPortal({
   onUpdate,
 }: CarRentalAdminPortalProps) {
   const [draft, setDraft] = useState(getDefaultDraft);
+  const [draftUpload, setDraftUpload] = useState<null | RemoteCarImageUploadPayload>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<null | { text: string; type: 'error' | 'success' }>(
     null
@@ -79,6 +88,7 @@ export default function CarRentalAdminPortal({
 
   const resetForm = () => {
     setDraft(getDefaultDraft());
+    setDraftUpload(null);
     setEditingId(null);
   };
 
@@ -107,6 +117,7 @@ export default function CarRentalAdminPortal({
       transmission: car.transmission,
       type: car.type,
     });
+    setDraftUpload(null);
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,11 +133,17 @@ export default function CarRentalAdminPortal({
 
     const reader = new FileReader();
     reader.onloadend = () => {
+      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
       setDraft((current) => ({
         ...current,
-        image: typeof reader.result === 'string' ? reader.result : '',
+        image: dataUrl,
       }));
-      showFeedback('Car image selected.', 'success');
+      setDraftUpload({
+        contentType: file.type || 'image/jpeg',
+        dataUrl,
+        fileName: file.name,
+      });
+      showFeedback('Car image selected. It will upload when you save the vehicle.', 'success');
     };
     reader.onerror = () => {
       showFeedback('Unable to read the car image.', 'error');
@@ -183,7 +200,37 @@ export default function CarRentalAdminPortal({
     setIsSaving(true);
 
     try {
-      const payload = buildCarPayload();
+      let finalImage = draft.image.trim() || undefined;
+
+      if (draftUpload) {
+        if (!adminPin) {
+          showFeedback('Please log in again before saving an uploaded image.', 'error');
+          return;
+        }
+
+        try {
+          finalImage = await uploadRemoteCarImage(draftUpload, adminPin);
+        } catch (error) {
+          if (error instanceof CarFleetApiUnavailableError) {
+            finalImage = draftUpload.dataUrl;
+            showFeedback(
+              'Backend upload is unavailable, so this vehicle image will only persist locally.',
+              'error'
+            );
+          } else if (error instanceof CarFleetApiError) {
+            showFeedback(error.message, 'error');
+            return;
+          } else {
+            showFeedback('Image upload failed. Please try again.', 'error');
+            return;
+          }
+        }
+      }
+
+      const payload = {
+        ...buildCarPayload(),
+        image: finalImage,
+      };
 
       if (editingId) {
         await onUpdate(payload);
@@ -444,7 +491,10 @@ export default function CarRentalAdminPortal({
                     <button
                       id="btn_clear_car_admin_image"
                       type="button"
-                      onClick={() => handleDraftChange('image', '')}
+                      onClick={() => {
+                        handleDraftChange('image', '');
+                        setDraftUpload(null);
+                      }}
                       className="text-xs font-semibold text-red-600 transition hover:text-red-700"
                     >
                       Remove picture
@@ -539,7 +589,7 @@ export default function CarRentalAdminPortal({
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                Changes are saved for this device and browser.
+                Changes are saved locally and sync across browsers when the shared backend is available.
               </div>
             </div>
 
